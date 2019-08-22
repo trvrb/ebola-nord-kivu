@@ -27,6 +27,8 @@ rule filter:
         metadata = files.metadata,
         include = files.forced_strains,
         exclude = files.dropped_strains
+    params:
+        min_length = 5000
     output:
         sequences = "results/filtered.fasta"
     shell:
@@ -36,6 +38,7 @@ rule filter:
             --metadata {input.metadata} \
             --include {input.include} \
             --exclude {input.exclude} \
+            --min-length {params.min_length} \
             --output {output.sequences} \
         """
 
@@ -57,8 +60,7 @@ rule align:
             --sequences {input.sequences} \
             --reference-sequence {input.reference} \
             --output {output.alignment} \
-            --fill-gaps \
-            --remove-reference
+            --fill-gaps
         """
 
 rule tree:
@@ -81,6 +83,7 @@ rule refine:
           - estimate timetree
           - use {params.coalescent} coalescent timescale
           - estimate {params.date_inference} node dates
+          - reroot with {params.root_node} as outgroup
         """
     input:
         tree = rules.tree.output.tree,
@@ -91,7 +94,8 @@ rule refine:
         node_data = "results/branch_lengths.json"
     params:
         coalescent = "skyline",
-        date_inference = "marginal"
+        date_inference = "marginal",
+        root_node = "MH481611"
     shell:
         """
         augur refine \
@@ -103,7 +107,8 @@ rule refine:
             --timetree \
             --coalescent {params.coalescent} \
             --date-confidence \
-            --date-inference {params.date_inference}
+            --date-inference {params.date_inference} \
+            --root {params.root_node}
         """
 
 rule ancestral:
